@@ -2,8 +2,9 @@
 // ═══════════════════════════════════════════════
 //  DATA
 // ═══════════════════════════════════════════════
-const KEYS={p:'gg_p',o:'gg_o',u:'gg_u',sess:'gg_sess',cfg:'gg_cfg',fav:'gg_fav'};
-const DEF_CFG={name:'GrubGlass',tag:'Fresh & Delicious',curr:'₦',fee:500,wa:'2348083252950',accent:'#ff7c3a',theme:'dark',nav:'top'};
+const KEYS={p:'gg_p',o:'gg_o',u:'gg_u',sess:'gg_sess',cfg:'gg_cfg',fav:'gg_fav',admin:'gg_admin'};
+const DEF_CFG={name:'GrubGlass',logoIcon:'bi-basket2-fill',tag:'Fresh & Delicious',heroLabel:'Fresh today',heroMain:'GrubGlass',heroHighlight:'Fresh & Delicious',heroDesc:'Discover the finest dishes, delivered fast. Order straight to WhatsApp.',heroPrimary:'Browse Menu',heroSecondary:'My Orders',curr:'₦',fee:500,wa:'2348083252950',accent:'#ff7c3a',theme:'dark',nav:'top'};
+const DEF_ADMIN={uid:'admin-1',email:'admin@grubglass.com',password:'admin123',name:'Admin'};
 const SEED=[
   {id:1,name:'Jerk Chicken Platter',price:4500,cat:'Mains',desc:'Smoky spiced jerk chicken with rice & peas, coleslaw and fried plantain.',img:'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=500&q=80',avail:true,rating:4.8,sold:312},
   {id:2,name:'Shrimp Fried Rice',price:3800,cat:'Mains',desc:'Wok-tossed rice with plump shrimp, egg, spring onions and vegetables.',img:'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=500&q=80',avail:true,rating:4.6,sold:201},
@@ -22,6 +23,7 @@ function init(){
   if(!ls(KEYS.cfg,null))lss(KEYS.cfg,DEF_CFG);
   if(!ls(KEYS.o,null))lss(KEYS.o,[]);
   if(!ls(KEYS.fav,null))lss(KEYS.fav,[]);
+  if(!ls(KEYS.admin,null))lss(KEYS.admin,DEF_ADMIN);
 }
 
 const DB={
@@ -46,19 +48,45 @@ const DB={
   sess(){return ls(KEYS.sess,null)},
   isIn(){return!!this.sess()},
   isAdmin(){return this.sess()?.role==='admin'},
+  adminCred(){return{...DEF_ADMIN,...ls(KEYS.admin,{})}},
+  saveAdminCred(d){
+    const current=this.adminCred();
+    const next={...current,...d,uid:DEF_ADMIN.uid};
+    lss(KEYS.admin,next);
+    const sess=this.sess();
+    if(sess?.role==='admin'){
+      lss(KEYS.sess,{...sess,email:next.email,name:next.name});
+    }
+    return next;
+  },
   login(email,pw){
-    if(email==='admin@grubglass.com'&&pw==='admin123'){const u={uid:'admin-1',email,name:'Admin',role:'admin',av:'<i class="bi bi-person-check-fill"></i>'};lss(KEYS.sess,u);return{ok:true,u}}
+    const admin=this.adminCred();
+    if(email===admin.email&&pw===admin.password){
+      const saved=ls(KEYS.u,[]).find(u=>u.email===email);
+      const u={uid:DEF_ADMIN.uid,email:admin.email,name:admin.name||'Admin',role:'admin',avatar:saved?.avatar||'',av:'<i class="bi bi-person-check-fill"></i>'};
+      lss(KEYS.sess,u);return{ok:true,u}
+    }
     const users=ls(KEYS.u,[]);const f=users.find(u=>u.email===email&&u.pw===pw);
     if(f){const{pw:_,...s}=f;lss(KEYS.sess,s);return{ok:true,u:s}}
     return{ok:false,err:'Invalid email or password.'}
   },
-  signup(name,email,pw){
+  signup(name,email,pw,avatar=''){
     const users=ls(KEYS.u,[]);
     if(users.find(u=>u.email===email))return{ok:false,err:'Email already registered.'};
-    const u={uid:'u-'+Date.now(),name,email,pw,role:'user',av:'<i class="bi bi-people"></i>                      '};
+    const u={uid:'u-'+Date.now(),name,email,pw,role:'user',avatar,av:'<i class="bi bi-people"></i>'};
     lss(KEYS.u,[...users,u]);const{pw:_,...s}=u;lss(KEYS.sess,s);return{ok:true,u:s}
   },
   logout(){localStorage.removeItem(KEYS.sess)},
+  saveAvatar(avatar){
+    const sess=this.sess();if(!sess)return null;
+    const next={...sess,avatar};
+    lss(KEYS.sess,next);
+    const users=ls(KEYS.u,[]);
+    const found=users.some(u=>u.uid===sess.uid||u.email===sess.email);
+    const clean={uid:sess.uid,email:sess.email,name:sess.name||sess.email,pw:'',role:sess.role||'user',avatar,av:sess.av};
+    lss(KEYS.u,found?users.map(u=>(u.uid===sess.uid||u.email===sess.email)?{...u,avatar}:u):[...users,clean]);
+    return next;
+  },
   favs(){return ls(KEYS.fav,[])},
   toggleFav(id){const f=this.favs();const n=f.includes(id)?f.filter(x=>x!==id):[...f,id];lss(KEYS.fav,n);return n.includes(id)},
   hasFav(id){return this.favs().includes(id)},
@@ -75,19 +103,83 @@ let cart=[],curPage='home',editId=null,formAvail=true,mQty=1,mProd=null,navMode=
 const $=id=>document.getElementById(id);
 function fmt(n){const c=DB.cfg();return c.curr+Number(n).toLocaleString('en-NG',{minimumFractionDigits:2})}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function icon(name){return `<i class="bi ${esc(String(name||'bi-basket2-fill').replace(/[^a-z0-9-]/gi,''))}"></i>`}
+function isImageSrc(src){return /^(https?:\/\/|data:image\/)/i.test(String(src||''))}
+function avatarHTML(u,cls=''){
+  return isImageSrc(u?.avatar)
+    ? `<img class="${esc(cls)}" src="${esc(u.avatar)}" alt="${esc(u.name||'Profile picture')}" onerror="this.parentElement.innerHTML='${icon('bi-person-fill').replace(/'/g,'&apos;')}'">`
+    : icon('bi-person-fill');
+}
+function storeLogoIcon(cfg=DB.cfg()){
+  return /^bi-[a-z0-9-]+$/i.test(cfg.logoIcon||'')?cfg.logoIcon:DEF_CFG.logoIcon;
+}
+function readImageFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=()=>reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 function toast(msg,type='info',ms=3000){
   const el=document.createElement('div');
   el.className=`toast ${type}`;
-  el.innerHTML=`<span>${type==='success'?'✓':type==='error'?'✕':'ℹ'}</span> ${esc(msg)}`;
+  el.innerHTML=`<span>${type==='success'?icon('bi-check-circle-fill'):type==='error'?icon('bi-x-circle-fill'):icon('bi-info-circle-fill')}</span> ${esc(msg)}`;
   $('twrap').appendChild(el);
   setTimeout(()=>{el.style.transition='all .3s';el.style.opacity='0';el.style.transform='translateY(8px) scale(.9)';setTimeout(()=>el.remove(),300)},ms);
+}
+
+function applyStoreBrand(){
+  const cfg=DB.cfg();
+  document.title=`${cfg.name} - Food Ordering`;
+  document.querySelectorAll('.brand-name,.sb-brand span').forEach(el=>el.textContent=cfg.name);
+  document.querySelectorAll('.brand-dot').forEach(el=>el.innerHTML=icon(storeLogoIcon(cfg)));
+}
+
+function applyHeroText(){
+  const cfg=DB.cfg();
+  if($('hero-tag'))$('hero-tag').innerHTML=`${icon('bi-lightning-charge-fill')} ${esc(cfg.heroLabel)}`;
+  if($('hero-title'))$('hero-title').innerHTML=`${esc(cfg.heroMain)}<br><em>${esc(cfg.heroHighlight)}</em>`;
+  if($('hero-desc'))$('hero-desc').textContent=cfg.heroDesc;
+  if($('hero-primary-text'))$('hero-primary-text').textContent=cfg.heroPrimary;
+  if($('hero-secondary-text'))$('hero-secondary-text').textContent=cfg.heroSecondary;
+}
+
+function fillSettingsForm(){
+  const cfg=DB.cfg();
+  if(!$('set-name'))return;
+  $('set-name').value=cfg.name||'';
+  if($('set-logo'))$('set-logo').value=storeLogoIcon(cfg);
+  $('set-tag').value=cfg.tag||'';
+  if($('set-hero-label'))$('set-hero-label').value=cfg.heroLabel||'';
+  if($('set-hero-main'))$('set-hero-main').value=cfg.heroMain||'';
+  if($('set-hero-highlight'))$('set-hero-highlight').value=cfg.heroHighlight||'';
+  if($('set-hero-desc'))$('set-hero-desc').value=cfg.heroDesc||'';
+  if($('set-hero-primary'))$('set-hero-primary').value=cfg.heroPrimary||'';
+  if($('set-hero-secondary'))$('set-hero-secondary').value=cfg.heroSecondary||'';
+  $('set-curr').value=cfg.curr||DEF_CFG.curr;
+  $('set-fee').value=Number.isFinite(Number(cfg.fee))?cfg.fee:0;
+  $('set-wa').value=cfg.wa||'';
+}
+
+function fillAdminLoginForm(){
+  if(!$('admin-email'))return;
+  const admin=DB.adminCred();
+  $('admin-email').value=admin.email||'';
+  $('admin-name').value=admin.name||'';
+  $('admin-password').value='';
+  $('admin-password2').value='';
 }
 
 // ═══════════════════════════════════════════════
 //  ROUTER
 // ═══════════════════════════════════════════════
 function go(page){
+  if(page==='admin'&&!DB.isAdmin()){
+    toast('Admin access required.','error');
+    page='login';
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('[data-page]').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
   curPage=page;
@@ -110,23 +202,19 @@ function go(page){
 // ═══════════════════════════════════════════════
 function renderHome(){
   const cfg=DB.cfg();
-  $('hero-title').innerHTML=`${esc(cfg.name)}<br><em>${esc(cfg.tag)}</em>`;
+  applyStoreBrand();
+  applyHeroText();
   const avail=DB.prods().filter(p=>p.avail).length;
   $('s-dishes').textContent=avail;
   $('s-orders').textContent=DB.orders().length;
   $('s-fee').textContent=fmt(cfg.fee);
   renderCats();
-
-  document.querySelectorAll('.brand-name').forEach(el => el.textContent = cfg.name);
-  document.querySelectorAll('.sb-brand span').forEach(el => el.textContent = cfg.name);
-
-
   renderGrid(DB.prods().filter(p=>p.avail));
 }
 
 function renderCats(){
   const bar=$('cat-bar');if(!bar)return;
-  bar.innerHTML=DB.cats().map(c=>`<button class="cat-chip${c==='All'?' active':''}" onclick="filterCat('${esc(c)}')" data-cat="${esc(c)}">${c==='All'?'🍽️ ':''}${esc(c)}</button>`).join('');
+  bar.innerHTML=DB.cats().map(c=>`<button class="cat-chip${c==='All'?' active':''}" onclick="filterCat('${esc(c)}')" data-cat="${esc(c)}">${c==='All'?icon('bi-grid-fill'):''}${esc(c)}</button>`).join('');
 }
 
 function filterCat(cat){
@@ -150,16 +238,16 @@ function renderGrid(prods){
 function cardHTML(p,i=0){
   return`<div class="pcard" style="animation-delay:${i*55}ms" onclick="openPM(${p.id})">
     <div class="pc-img">
-      ${p.img?`<img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'"/>`:'🍽️'}
+      ${p.img?`<img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'"/>`:icon('bi-egg-fried')}
       <span class="pc-badge">${esc(p.cat)}</span>
-      <button class="pc-fav${DB.hasFav(p.id)?' active':''}" onclick="event.stopPropagation();toggleFav(${p.id},this)">${DB.hasFav(p.id)?'❤️':'🤍'}</button>
+      <button class="pc-fav${DB.hasFav(p.id)?' active':''}" onclick="event.stopPropagation();toggleFav(${p.id},this)">${icon(DB.hasFav(p.id)?'bi-heart-fill':'bi-heart')}</button>
     </div>
     <div class="pc-body">
       <div class="pc-cat">${esc(p.cat)}</div>
       <div class="pc-name">${esc(p.name)}</div>
       <div class="pc-desc">${esc(p.desc||'')}</div>
       <div class="pc-foot">
-        <div><div class="pc-price">${fmt(p.price)}</div><div class="pc-stars">${'★'.repeat(Math.round(p.rating||0))} <span style="color:var(--t3)">(${p.sold||0})</span></div></div>
+        <div><div class="pc-price">${fmt(p.price)}</div><div class="pc-stars">${icon('bi-star-fill').repeat(Math.round(p.rating||0))} <span style="color:var(--t3)">(${p.sold||0})</span></div></div>
         <button class="add-btn" onclick="event.stopPropagation();quickAdd(${p.id})" title="Add">+</button>
       </div>
     </div>
@@ -173,25 +261,25 @@ function openPM(id){
   const p=DB.prod(id);if(!p)return;
   mProd=p;mQty=1;
   const imgEl=$('m-img');
-  imgEl.innerHTML=`<button class="m-close" onclick="closePM()">✕</button>${p.img?`<img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'"/>`:'🍽️'}`;
+  imgEl.innerHTML=`<button class="m-close" onclick="closePM()">${icon('bi-x-lg')}</button>${p.img?`<img src="${esc(p.img)}" alt="${esc(p.name)}" onerror="this.style.display='none'"/>`:icon('bi-egg-fried')}`;
   $('m-cat').textContent=p.cat;
   $('m-name').textContent=p.name;
   $('m-desc').textContent=p.desc||'';
   $('m-qty').textContent=1;
   $('m-price').textContent=fmt(p.price);
-  $('m-add-btn').textContent=`Add to Order — ${fmt(p.price)}`;
+  $('m-add-btn').textContent=`Add to Order - ${fmt(p.price)}`;
   $('prod-modal').classList.add('open');
 }
 function closePM(){$('prod-modal').classList.remove('open')}
 function mqty(d){
   mQty=Math.max(1,mQty+d);
   $('m-qty').textContent=mQty;
-  if(mProd){$('m-price').textContent=fmt(mProd.price*mQty);$('m-add-btn').textContent=`Add to Order — ${fmt(mProd.price*mQty)}`}
+  if(mProd){$('m-price').textContent=fmt(mProd.price*mQty);$('m-add-btn').textContent=`Add to Order - ${fmt(mProd.price*mQty)}`}
 }
 function mAddCart(){
   if(!mProd)return;
   for(let i=0;i<mQty;i++)quickAdd(mProd.id,false);
-  toast(`${mProd.name} ×${mQty} added!`,'success');
+  toast(`${mProd.name} x${mQty} added!`,'success');
   closePM();openCart();
 }
 
@@ -200,15 +288,15 @@ function mAddCart(){
 // ═══════════════════════════════════════════════
 function toggleFav(id,btn){
   const now=DB.toggleFav(id);
-  btn.textContent=now?'❤️':'🤍';
+  btn.innerHTML=icon(now?'bi-heart-fill':'bi-heart');
   btn.classList.toggle('active',now);
-  toast(now?'Added to favourites ❤️':'Removed from favourites',now?'success':'info');
+  toast(now?'Added to favourites':'Removed from favourites',now?'success':'info');
 }
 function renderFavs(){
   const ids=DB.favs();
   const prods=DB.prods().filter(p=>ids.includes(p.id));
   const g=$('fav-grid');if(!g)return;
-  g.innerHTML=prods.length?prods.map((p,i)=>cardHTML(p,i)).join(''):'<p style="color:var(--t3);padding:48px;text-align:center;grid-column:1/-1">No favourites yet. Tap 🤍 on any dish!</p>';
+  g.innerHTML=prods.length?prods.map((p,i)=>cardHTML(p,i)).join(''):'<p style="color:var(--t3);padding:48px;text-align:center;grid-column:1/-1">No favourites yet. Tap the heart icon on any dish.</p>';
 }
 
 // ═══════════════════════════════════════════════
@@ -250,10 +338,10 @@ function cartFootHTML(){
 }
 
 function cartItemsHTML(onQty='chQty',onRm='rmCart'){
-  if(!cart.length)return`<div class="cp-empty"><div class="cp-empty-icon">🛒</div><p>Cart is empty</p></div>`;
+  if(!cart.length)return`<div class="cp-empty"><div class="cp-empty-icon">${icon('bi-cart')}</div><p>Cart is empty</p></div>`;
   return cart.map(x=>`
     <div class="ci">
-      <div class="ci-thumb">${x.img?`<img src="${esc(x.img)}" onerror="this.parentElement.innerHTML='🍽️'"/>`:'🍽️'}</div>
+      <div class="ci-thumb">${x.img?`<img src="${esc(x.img)}" onerror="this.parentElement.innerHTML='${icon('bi-egg-fried').replace(/'/g,'&apos;')}'"/>`:icon('bi-egg-fried')}</div>
       <div class="ci-info">
         <div class="ci-name">${esc(x.name)}</div>
         <div class="ci-price">${fmt(x.price*x.qty)}</div>
@@ -284,7 +372,7 @@ function checkout(){
   const o=DB.placeOrder(cart,DB.sess().uid);
   cart=[];updBadge();renderCP();renderCD();
   $('cart-panel').classList.remove('open');closeCart();
-  toast(`Order ${o.id} placed! 🎉`,'success',4000);
+  toast(`Order ${o.id} placed!`,'success',4000);
   go('orders');
 }
 
@@ -292,7 +380,7 @@ function orderWA(){
   if(!DB.isIn()){toast('Please log in first.','error');go('login');return}
   if(!cart.length)return;
   const cfg=DB.cfg();
-  const lines=cart.map(x=>`• ${x.qty}x ${x.name} — ${fmt(x.price*x.qty)}`).join('\n');
+  const lines=cart.map(x=>`- ${x.qty}x ${x.name} - ${fmt(x.price*x.qty)}`).join('\n');
   const msg=`Hello! I'd like to order:\n\n${lines}\n\nDelivery: ${fmt(cfg.fee)}\nTotal: ${fmt(cartSub()+cfg.fee)}`;
   window.open(`https://wa.me/${cfg.wa}?text=${encodeURIComponent(msg)}`,'_blank');
 }
@@ -305,28 +393,36 @@ function switchTab(tab){
   $('form-login').style.display=tab==='login'?'block':'none';
   $('form-signup').style.display=tab==='signup'?'block':'none';
 }
-function fillAdmin(){$('l-email').value='admin@grubglass.com';$('l-pw').value='admin123'}
+function fillAdmin(){
+  const admin=DB.adminCred();
+  $('l-email').value=admin.email;
+  $('l-pw').value=admin.password;
+}
 function doLogin(){
   const em=$('l-email').value.trim(),pw=$('l-pw').value;
   if(!em||!pw){ferr('l-err','Fill in all fields.');return}
   const r=DB.login(em,pw);
-  if(r.ok){toast(`Welcome back, ${r.u.name||r.u.email}! 👋`,'success');updNavUser();go('home')}
+  if(r.ok){toast(`Welcome back, ${r.u.name||r.u.email}!`,'success');updNavUser();go('home')}
   else{ferr('l-err',r.err);$('l-pw').classList.add('err','shake');setTimeout(()=>$('l-pw').classList.remove('shake'),400)}
 }
-function doSignup(){
+async function doSignup(){
   const n=$('s-name').value.trim(),em=$('s-email').value.trim(),pw=$('s-pw').value,pw2=$('s-pw2').value;
   if(!n||!em||!pw){ferr('s-err','Fill in all fields.');return}
   if(pw!==pw2){ferr('s-err','Passwords do not match.');return}
   if(pw.length<6){ferr('s-err','Password must be 6+ characters.');return}
-  const r=DB.signup(n,em,pw);
-  if(r.ok){toast(`Welcome, ${n}! 🎉`,'success');updNavUser();go('home')}
+  const file=$('s-avatar-file')?.files?.[0];
+  const avatar=file?await readImageFile(file):$('s-avatar')?.value.trim()||'';
+  if(avatar&&!isImageSrc(avatar)){ferr('s-err','Use a valid profile image URL.');return}
+  const r=DB.signup(n,em,pw,avatar);
+  if(r.ok){toast(`Welcome, ${n}!`,'success');updNavUser();go('home')}
   else ferr('s-err',r.err);
 }
 function doLogout(){DB.logout();cart=[];updBadge();updNavUser();toast('Logged out.','info');go('home')}
 function ferr(id,msg){const el=$(id);if(el){el.textContent=msg;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),4000)}}
 function updNavUser(){
   const u=DB.sess();const el=$('nav-user');if(!el)return;
-  if(u){el.innerHTML=u.av||'😁';el.onclick=()=>go(u.role==='admin'?'admin':'profile')}
+  document.querySelectorAll('.admin-only').forEach(link=>link.style.display=u?.role==='admin'?'':'none');
+  if(u){el.innerHTML=isImageSrc(u.avatar)?avatarHTML(u,'nav-avatar'):(u.av||icon('bi-person-check-fill'));el.onclick=()=>go(u.role==='admin'?'admin':'profile')}
   else{el.innerHTML='<i class="bi bi-person-x"></i>';el.onclick=()=>go('login')}
 }
 
@@ -335,9 +431,9 @@ function updNavUser(){
 // ═══════════════════════════════════════════════
 function renderOrders(){
   const u=DB.sess();const list=$('orders-list');if(!list)return;
-  if(!u){list.innerHTML='<div style="text-align:center;padding:60px;color:var(--t3)"><p style="font-size:36px;margin-bottom:10px">🔒</p><p>Please <a onclick="go(\'login\')" style="color:var(--a1);cursor:pointer">log in</a> to see orders.</p></div>';return}
+  if(!u){list.innerHTML=`<div style="text-align:center;padding:60px;color:var(--t3)"><p style="font-size:36px;margin-bottom:10px">${icon('bi-lock-fill')}</p><p>Please <a onclick="go('login')" style="color:var(--a1);cursor:pointer">log in</a> to see orders.</p></div>`;return}
   const orders=u.role==='admin'?DB.orders():DB.userOrders(u.uid);
-  if(!orders.length){list.innerHTML='<div style="text-align:center;padding:60px;color:var(--t3)"><p style="font-size:36px;margin-bottom:10px">📋</p><p>No orders yet!</p></div>';return}
+  if(!orders.length){list.innerHTML=`<div style="text-align:center;padding:60px;color:var(--t3)"><p style="font-size:36px;margin-bottom:10px">${icon('bi-clipboard-check')}</p><p>No orders yet!</p></div>`;return}
   list.innerHTML=orders.map((o,i)=>{
     const names=o.items.map(x=>x.name).join(', ');
     const d=new Date(o.at).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'});
@@ -367,60 +463,40 @@ function renderProfile(){
   const u=DB.sess();const cfg=DB.cfg();
   $('p-name').textContent=u?(u.name||u.email):'Guest';
   $('p-email').textContent=u?.email||'';
+  if($('p-avatar'))$('p-avatar').innerHTML=avatarHTML(u);
+  if($('p-avatar-url'))$('p-avatar-url').value=isImageSrc(u?.avatar)&&!String(u.avatar).startsWith('data:image/')?u.avatar:'';
+  if($('p-avatar-file'))$('p-avatar-file').value='';
   $('tog-dark').classList.toggle('on',document.documentElement.dataset.theme!=='light');
   $('tog-sidebar').classList.toggle('on',navMode==='sidebar');
   document.querySelectorAll('.swatch').forEach(sw=>sw.classList.toggle('active',sw.dataset.c===cfg.accent));
-  $('set-name').value=cfg.name;$('set-tag').value=cfg.tag;$('set-curr').value=cfg.curr;
-  $('set-fee').value=cfg.fee;$('set-wa').value=cfg.wa;
+  fillSettingsForm();
 }
 
-// function toggleTheme(){
-//   let icon=$('theme-icon')
-//   const light=document.documentElement.dataset.theme==='light';
-//   document.documentElement.dataset.theme=light?'dark':'light';
-//   DB.saveCfg({theme:light?'dark':'light'});
-//   $('tog-dark').classList.toggle('on',!light);
-//   toast(`${light?'Dark':'Light'} mode`,'info',1500);
-
-//   if(document.documentElement.dataset.theme==='dark'){
-//     icon.className='bi bi-moon';
-// }else{
-//   icon.className='bi bi-sun';
-// }
-// }
+async function saveAvatar(){
+  if(!DB.isIn()){toast('Please log in first.','error');go('login');return}
+  const file=$('p-avatar-file')?.files?.[0];
+  const avatar=file?await readImageFile(file):$('p-avatar-url').value.trim();
+  if(avatar&&!isImageSrc(avatar)){toast('Use a valid image URL or upload an image file.','error');return}
+  DB.saveAvatar(avatar);
+  updNavUser();
+  renderProfile();
+  toast('Profile picture saved.','success');
+}
 
 function toggleTheme(){
+  let icon=$('theme-icon')
+  const light=document.documentElement.dataset.theme==='light';
+  document.documentElement.dataset.theme=light?'dark':'light';
+  DB.saveCfg({theme:light?'dark':'light'});
+  $('tog-dark').classList.toggle('on',!light);
+  toast(`${light?'Dark':'Light'} mode`,'info',1500);
 
-  const light =
-    document.documentElement.dataset.theme === 'light';
-
-  document.documentElement.dataset.theme =
-    light ? 'dark' : 'light';
-
-  DB.saveCfg({
-    theme: light ? 'dark' : 'light'
-  });
-
-  $('tog-dark')?.classList.toggle('on', !light);
-
-  document.querySelectorAll('.theme-icon')
-    .forEach(icon=>{
-
-      icon.className =
-        light
-        ? 'bi bi-moon theme-icon'
-        : 'bi bi-sun theme-icon';
-
-    });
-
-  toast(
-    `${light ? 'Dark' : 'Light'} mode`,
-    'info',
-    1500
-  );
+  if(document.documentElement.dataset.theme==='dark'){
+    icon.className='bi bi-moon';
+}else{
+  icon.className='bi bi-sun';
 }
-
-
+}
 function toggleNavMode(){
   navMode=navMode==='top'?'sidebar':'top';
   DB.saveCfg({nav:navMode});
@@ -434,9 +510,19 @@ function toggleNavMode(){
   }
 }
 function applyNav(){
+  const small=window.matchMedia('(max-width: 600px)').matches;
+  if(small){
+    sbOpen=false;
+    $('top-nav').style.display='';
+    $('sidebar').classList.remove('open');
+    $('content').classList.remove('sb-open');
+    if($('threeDot'))$('threeDot').style.display='none';
+    return;
+  }
   $('top-nav').style.display=navMode==='sidebar'?'none':'';
-  $('sidebar').classList.toggle('open',navMode==='sidebar');
+  $('sidebar').classList.toggle('open',navMode==='sidebar'||sbOpen);
   $('content').classList.toggle('sb-open',navMode==='sidebar');
+  if($('threeDot'))$('threeDot').style.display=navMode==='sidebar'?'block':'none';
 }
 function setAccent(c){
   document.documentElement.style.setProperty('--a1',c);
@@ -448,8 +534,27 @@ function setAccent(c){
 }
 function saveSettings(){
   const name=$('set-name').value.trim();if(!name){toast('Name required.','error');return}
-  DB.saveCfg({name,tag:$('set-tag').value.trim(),curr:$('set-curr').value.trim(),fee:parseFloat($('set-fee').value),wa:$('set-wa').value.trim()});
-  toast('Settings saved!','success');renderHome();
+  const fee=parseFloat($('set-fee').value);
+  DB.saveCfg({
+    name,
+    logoIcon:($('set-logo')?.value.trim()||DEF_CFG.logoIcon),
+    tag:$('set-tag').value.trim(),
+    heroLabel:$('set-hero-label')?.value.trim()||DEF_CFG.heroLabel,
+    heroMain:$('set-hero-main')?.value.trim()||name,
+    heroHighlight:$('set-hero-highlight')?.value.trim()||$('set-tag').value.trim()||DEF_CFG.heroHighlight,
+    heroDesc:$('set-hero-desc')?.value.trim()||DEF_CFG.heroDesc,
+    heroPrimary:$('set-hero-primary')?.value.trim()||DEF_CFG.heroPrimary,
+    heroSecondary:$('set-hero-secondary')?.value.trim()||DEF_CFG.heroSecondary,
+    curr:$('set-curr').value.trim()||DEF_CFG.curr,
+    fee:Number.isFinite(fee)?fee:0,
+    wa:$('set-wa').value.trim()
+  });
+  applyStoreBrand();
+  applyHeroText();
+  fillSettingsForm();
+  toast('Settings saved!','success');
+  renderHome();
+  if(curPage==='admin')renderAdmin();
 }
 
 // ═══════════════════════════════════════════════
@@ -457,6 +562,10 @@ function saveSettings(){
 // ═══════════════════════════════════════════════
 function renderAdmin(){
   if(!DB.isAdmin()){toast('Admin access required.','error');go('login');return}
+  applyStoreBrand();
+  applyHeroText();
+  fillSettingsForm();
+  fillAdminLoginForm();
   const prods=DB.prods();const orders=DB.orders();
   $('as-p').textContent=prods.length;
   $('as-o').textContent=orders.length;
@@ -469,8 +578,8 @@ function renderAProds(){
   const prods=DB.prods();
   t.innerHTML=prods.map(p=>`
     <div class="arow">
-      <div class="ar-th">${p.img?`<img src="${esc(p.img)}" onerror="this.parentElement.innerHTML='🍽️'"/>`:'🍽️'}</div>
-      <div class="ar-info"><div class="ar-name">${esc(p.name)}</div><div class="ar-cat">${esc(p.cat)} • ${p.avail?'✅':'❌'}</div></div>
+      <div class="ar-th">${p.img?`<img src="${esc(p.img)}" onerror="this.parentElement.innerHTML='${icon('bi-egg-fried').replace(/'/g,'&apos;')}'"/>`:icon('bi-egg-fried')}</div>
+      <div class="ar-info"><div class="ar-name">${esc(p.name)}</div><div class="ar-cat">${esc(p.cat)} - ${p.avail?'Available':'Unavailable'}</div></div>
       <div class="ar-price">${fmt(p.price)}</div>
       <div class="ar-acts">
         <button class="ar-btn" onclick="openAF(${p.id})"><i class="bi bi-pencil"></i></button>
@@ -495,6 +604,28 @@ function adminTab(tab){
   $('admin-prod-panel').style.display=tab==='products'?'block':'none';
   $('admin-ord-panel').style.display=tab==='orders'?'block':'none';
   $('store').style.display=tab==='store'?'block':'none';
+  $('admin-access-panel').style.display=tab==='access'?'block':'none';
+  if(tab==='store')fillSettingsForm();
+  if(tab==='access')fillAdminLoginForm();
+}
+function saveAdminLogin(){
+  if(!DB.isAdmin()){toast('Admin access required.','error');go('login');return}
+  const email=$('admin-email').value.trim();
+  const name=$('admin-name').value.trim()||'Admin';
+  const password=$('admin-password').value;
+  const password2=$('admin-password2').value;
+  if(!email){toast('Admin email required.','error');return}
+  if(password||password2){
+    if(password.length<6){toast('Password must be 6+ characters.','error');return}
+    if(password!==password2){toast('Passwords do not match.','error');return}
+  }
+  const update={email,name};
+  if(password)update.password=password;
+  DB.saveAdminCred(update);
+  fillAdminLoginForm();
+  updNavUser();
+  renderProfile();
+  toast('Admin login updated.','success');
 }
 function openAF(id){
   editId=id||null;formAvail=true;
@@ -526,7 +657,10 @@ function delProd(id){if(!confirm('Delete this product?'))return;DB.delProd(id);t
 // ═══════════════════════════════════════════════
 //  SIDEBAR TOGGLE
 // ═══════════════════════════════════════════════
-function toggleSidebar(){sbOpen=!sbOpen;$('sidebar').classList.toggle('open',sbOpen)}
+function toggleSidebar(){
+  if(window.matchMedia('(max-width: 600px)').matches){sbOpen=false;applyNav();return}
+  sbOpen=!sbOpen;$('sidebar').classList.toggle('open',sbOpen)
+}
 
 // ═══════════════════════════════════════════════
 //  INIT
@@ -539,6 +673,8 @@ if(cfg.accent){
   document.documentElement.style.setProperty('--a1d',cfg.accent+'30');
 }
 navMode=cfg.nav||'top';
+applyStoreBrand();
 applyNav();
+window.addEventListener('resize',applyNav);
 updNavUser();
 go('home');

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>GrubGlass 🍜</title>
+<title>GrubGlass</title>
 <link rel="stylesheet"
 href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="style.css"/>
@@ -16,17 +16,18 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 <!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
   <div class="sb-brand">
-    <div class="brand-dot">🍜</div>
+    <div class="brand-dot"><i class="bi bi-basket2-fill"></i></div>
     <span style="font-family:'Fraunces',serif;font-weight:900;font-size:17px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">GrubGlass</span>
   </div>
   <button class="sb-link active" data-page="home" onclick="go('home')"><span class="sb-icon"><i class="bi bi-houses"></i></span>Home</button>
   <button class="sb-link" data-page="favorites" onclick="go('favorites')"><span class="sb-icon"><i class="bi bi-heart"></i></span>Favourites</button>
   <button class="sb-link" data-page="orders" onclick="go('orders')"><span class="sb-icon"><i class="bi bi-list-check"></i></span>Orders</button>
+  <button class="sb-link admin-only" data-page="admin" onclick="go('admin')" style="display:none"><span class="sb-icon"><i class="bi bi-shield-lock"></i></span>Admin</button>
   <button class="sb-link" data-page="profile" onclick="go('profile')"><span class="sb-icon"><i class="bi bi-gear"></i></span>Settings</button>
 <div class="nav-rights" id="min">
     <!-- <button class="icon-pill" id="nav-user" onclick="go('login')" title="Account"><i class="bi bi-person"></i></button> -->
     <!-- <button class="icon-pill" id="nav-users" onclick="go('login')" title="Account"><i class="bi bi-person"></i></button> -->
-    <button class="icon-pill" onclick="toggleTheme()" title="Theme"><i id="theme-icon" class="theme-icon"></i></button>
+    <button class="icon-pill" onclick="toggleTheme()" title="Theme"><i id="theme-icon" class="bi bi-moon"></i></button>
     <!-- <button class="cart-pill" onclick="openCart()">
       <i class="bi bi-cart"></i> Cart <span class="cbadge" id="cbadge">0</span>
     </button> -->
@@ -42,13 +43,14 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
   <div class="brand">
     <button class="icon-pill" id="threeDot" style="display:none"
     onclick="toggleSidebar()">☰</button>
-    <div class="brand-dot">🍜</div>
+    <div class="brand-dot"><i class="bi bi-basket2-fill"></i></div>
     <span class="brand-name">GrubGlass</span>
   </div>
   <div class="nav-links">
     <button class="nav-link active" data-page="home" onclick="go('home')">Home</button>
     <button class="nav-link" data-page="favorites" onclick="go('favorites')">Favourites</button>
     <button class="nav-link" data-page="orders" onclick="go('orders')">Orders</button>
+    <button class="nav-link admin-only" data-page="admin" onclick="go('admin')" style="display:none">Admin</button>
     <button class="nav-link" data-page="profile" onclick="go('profile')">Settings</button>
   </div>
   <div class="nav-right" id="max">
@@ -67,12 +69,12 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
     <!-- HOME -->
     <div class="page active" id="page-home">
       <section class="hero">
-        <div class="hero-tag">🔥 Fresh today</div>
+        <div class="hero-tag" id="hero-tag"><i class="bi bi-lightning-charge-fill"></i> Fresh today</div>
         <h1 id="hero-title">GrubGlass<br><em>Fresh &amp; Delicious</em></h1>
-        <p>Discover the finest dishes, delivered fast. Order straight to WhatsApp.</p>
+        <p id="hero-desc">Discover the finest dishes, delivered fast. Order straight to WhatsApp.</p>
         <div class="hero-acts">
-          <button class="btn-p" onclick="document.getElementById('hsearch').focus()"><i class="bi bi-search"></i>Browse Menu</button>
-          <button class="btn-s" onclick="go('orders')"><i class="bi bi-list-check"></i> My Orders</button>
+          <button class="btn-p" onclick="document.getElementById('hsearch').focus()"><i class="bi bi-search"></i><span id="hero-primary-text">Browse Menu</span></button>
+          <button class="btn-s" onclick="go('orders')"><i class="bi bi-list-check"></i> <span id="hero-secondary-text">My Orders</span></button>
         </div>
       </section>
       <div class="stats">
@@ -112,9 +114,12 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
         <div class="pcard2">
           <h3><i class="bi bi-person"></i> Account</h3>
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-            <div style="width:48px;height:48px;border-radius:50%;background:var(--a1d);display:flex;align-items:center;justify-content:center;font-size:24px">🧑</div>
+            <div class="profile-avatar" id="p-avatar"><i class="bi bi-person-fill"></i></div>
             <div><div id="p-name" style="font-weight:700;font-size:15px">Guest</div><div id="p-email" style="color:var(--t3);font-size:12px"></div></div>
           </div>
+          <div class="fg"><label class="flbl">Profile image URL</label><input class="finp" id="p-avatar-url" type="url" placeholder="https://example.com/photo.jpg"/></div>
+          <div class="fg"><label class="flbl">Upload profile image</label><input class="finp" id="p-avatar-file" type="file" accept="image/*"/></div>
+          <button class="btn-s full mt16" onclick="saveAvatar()"><i class="bi bi-person-bounding-box"></i> Save Profile Picture</button>
           <button class="btn-p full mt16" onclick="go('login')"><i class="bi bi-key"></i> Login / Sign Up</button>
           <button class="btn-s full mt16" onclick="doLogout()"><i class="bi bi-box-arrow-right"></i> Logout</button>
         </div>
@@ -159,11 +164,12 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
       <div class="atab-bar">
         <button class="atab-btn active" data-tab="products" onclick="adminTab('products')"><i class="bi bi-egg-fried"></i> Products</button>
         <button class="atab-btn" data-tab="orders" onclick="adminTab('orders')"><i class="bi bi-box-fill"></i> Orders</button>
-        <button class="atab-btn" data-tab="store" onclick="adminTab('store')"><i class="bi bi-box-fill"></i> store settings</button>
+        <button class="atab-btn" data-tab="store" onclick="adminTab('store')"><i class="bi bi-shop"></i> Store settings</button>
+        <button class="atab-btn" data-tab="access" onclick="adminTab('access')"><i class="bi bi-key"></i> Login access</button>
       </div>
       <div id="admin-prod-panel">
         <div class="atable">
-          <div class="atable-head"><h3>Products</h3><button class="btn-p" style="padding:7px 16px;font-size:12px" onclick="openAF()">＋ Add</button></div>
+          <div class="atable-head"><h3>Products</h3><button class="btn-p" style="padding:7px 16px;font-size:12px" onclick="openAF()"><i class="bi bi-plus-lg"></i> Add</button></div>
           <div id="admin-ptable"></div>
         </div>
       </div>
@@ -175,15 +181,42 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
       </div>
       <div class="" id="store" style="display: none;">
         <div class="pcard2" style="grid-column:1/-1">
-          <h3><i class="bi bi-shop"></i> Restaurant Settings</h3>
+          <h3><i class="bi bi-shop"></i> Store Settings</h3>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="fg"><label class="flbl">Restaurant Name</label><input class="finp" id="set-name" placeholder="GrubGlass"/></div>
+            <div class="fg"><label class="flbl">Brand Name</label><input class="finp" id="set-name" placeholder="GrubGlass"/></div>
+            <div class="fg"><label class="flbl">Logo Icon</label>
+              <select class="finp" id="set-logo">
+                <option value="bi-basket2-fill">Basket</option>
+                <option value="bi-shop">Shop</option>
+                <option value="bi-cup-hot-fill">Hot meal</option>
+                <option value="bi-egg-fried">Food</option>
+                <option value="bi-stars">Premium</option>
+              </select>
+            </div>
             <div class="fg"><label class="flbl">Tagline</label><input class="finp" id="set-tag" placeholder="Fresh & Delicious"/></div>
+            <div class="fg"><label class="flbl">Hero Label</label><input class="finp" id="set-hero-label" placeholder="Fresh today"/></div>
+            <div class="fg"><label class="flbl">Hero Main Text</label><input class="finp" id="set-hero-main" placeholder="GrubGlass"/></div>
+            <div class="fg"><label class="flbl">Hero Highlight Text</label><input class="finp" id="set-hero-highlight" placeholder="Fresh & Delicious"/></div>
+            <div class="fg" style="grid-column:1/-1"><label class="flbl">Hero Description</label><textarea class="finp" id="set-hero-desc" style="height:80px;resize:vertical" placeholder="Discover the finest dishes..."></textarea></div>
+            <div class="fg"><label class="flbl">Primary Button Text</label><input class="finp" id="set-hero-primary" placeholder="Browse Menu"/></div>
+            <div class="fg"><label class="flbl">Secondary Button Text</label><input class="finp" id="set-hero-secondary" placeholder="My Orders"/></div>
             <div class="fg"><label class="flbl">Currency</label><input class="finp" id="set-curr" placeholder="₦" style="max-width:90px"/></div>
-            <div class="fg"><label class="flbl">Delivery Fee</label><input class="finp" id="set-fee" type="number" placeholder="500"/></div>
+            <div class="fg"><label class="flbl">Delivery Price</label><input class="finp" id="set-fee" type="number" min="0" step="0.01" placeholder="500"/></div>
             <div class="fg" style="grid-column:1/-1"><label class="flbl">WhatsApp Number</label><input class="finp" id="set-wa" placeholder="2348083252950"/></div>
           </div>
           <button class="btn-p mt16" onclick="saveSettings()"><i class="bi bi-save"></i> Save Settings</button>
+        </div>
+      </div>
+      <div id="admin-access-panel" style="display:none">
+        <div class="pcard2" style="grid-column:1/-1">
+          <h3><i class="bi bi-key"></i> Admin Login Access</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="fg"><label class="flbl">Admin Email</label><input class="finp" id="admin-email" type="email" placeholder="admin@example.com"/></div>
+            <div class="fg"><label class="flbl">Admin Name</label><input class="finp" id="admin-name" type="text" placeholder="Admin"/></div>
+            <div class="fg"><label class="flbl">New Password</label><input class="finp" id="admin-password" type="password" placeholder="Leave blank to keep current"/></div>
+            <div class="fg"><label class="flbl">Confirm Password</label><input class="finp" id="admin-password2" type="password" placeholder="Repeat password"/></div>
+          </div>
+          <button class="btn-p mt16" onclick="saveAdminLogin()"><i class="bi bi-save"></i> Save Login</button>
         </div>
       </div>
     </div>
@@ -193,7 +226,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
       <div class="auth-wrap">
         <div class="auth-card">
           <div style="text-align:center;margin-bottom:22px">
-            <div class="brand-dot" style="margin:0 auto 14px;width:50px;height:50px;font-size:24px">🍜</div>
+            <div class="brand-dot" style="margin:0 auto 14px;width:50px;height:50px;font-size:24px"><i class="bi bi-basket2-fill"></i></div>
             <h2 style="font-family:'Fraunces',serif;font-size:22px;font-weight:800;margin-bottom:3px">Welcome Back</h2>
             <p style="color:var(--t2);font-size:13px">Sign in to order your favourite food</p>
           </div>
@@ -208,11 +241,13 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
             <p class="ferr" id="l-err"></p>
             <button class="sub-btn" onclick="doLogin()">Sign In →</button>
             <div class="auth-div">demo</div>
-            <button class="btn-s full" style="font-size:12px" onclick="fillAdmin()">👨‍🍳Fill Admin Credentials</button>
+            <button class="btn-s full" style="font-size:12px" onclick="fillAdmin()"><i class="bi bi-shield-lock"></i> Fill Admin Credentials</button>
           </div>
           <!-- Signup -->
           <div id="form-signup" style="display:none">
             <div class="fg"><label class="flbl">Full Name</label><input class="finp" id="s-name" type="text" placeholder="Your name"/></div>
+            <div class="fg"><label class="flbl">Profile image URL</label><input class="finp" id="s-avatar" type="url" placeholder="Optional image URL"/></div>
+            <div class="fg"><label class="flbl">Upload profile image</label><input class="finp" id="s-avatar-file" type="file" accept="image/*"/></div>
             <div class="fg"><label class="flbl">Email</label><input class="finp" id="s-email" type="email" placeholder="you@example.com"/></div>
             <div class="fg"><label class="flbl">Password</label><input class="finp" id="s-pw" type="password" placeholder="Min 6 chars"/></div>
             <div class="fg"><label class="flbl">Confirm Password</label><input class="finp" id="s-pw2" type="password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doSignup()"/></div>
@@ -250,7 +285,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 <!-- PRODUCT MODAL -->
 <div class="moverlay" id="prod-modal" onclick="if(event.target===this)closePM()">
   <div class="modal">
-    <div class="m-img" id="m-img"><button class="m-close" onclick="closePM()">✕</button></div>
+    <div class="m-img" id="m-img"><button class="m-close" onclick="closePM()"><i class="bi bi-x-lg"></i></button></div>
     <div class="m-body">
       <div class="m-cat" id="m-cat"></div>
       <h2 class="m-name" id="m-name"></h2>
@@ -262,9 +297,9 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
       </div>
       <div class="m-qrow">
         <div class="qty-ctrl">
-          <button class="qty-btn" onclick="mqty(-1)">−</button>
+          <button class="qty-btn" onclick="mqty(-1)"><i class="bi bi-dash-lg"></i></button>
           <span class="qty-num" id="m-qty">1</span>
-          <button class="qty-btn" onclick="mqty(1)">+</button>
+          <button class="qty-btn" onclick="mqty(1)"><i class="bi bi-plus-lg"></i></button>
         </div>
         <div><div style="font-size:11px;color:var(--t3);margin-bottom:2px">Price</div><div id="m-price" style="font-family:'Fraunces',serif;font-size:19px;font-weight:700;color:var(--a1)"></div></div>
         <button class="m-add" id="m-add-btn" onclick="mAddCart()">Add to Order</button>
@@ -305,8 +340,8 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
     <img id="af-prev" class="af-prev" alt="preview"/>
     <div class="fg"><label class="flbl">Availability</label>
       <div class="avail-row">
-        <button class="atog active" id="tog-yes" onclick="setFA(true)">✓ Available</button>
-        <button class="atog" id="tog-no" onclick="setFA(false)">✗ Unavailable</button>
+        <button class="atog active" id="tog-yes" onclick="setFA(true)"><i class="bi bi-check-lg"></i> Available</button>
+        <button class="atog" id="tog-no" onclick="setFA(false)"><i class="bi bi-x-lg"></i> Unavailable</button>
       </div>
     </div>
     <div class="af-acts">
@@ -318,6 +353,6 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 
 <!-- TOAST -->
 <div class="twrap" id="twrap"></div>
-<script src="script.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

@@ -678,3 +678,5 @@ applyNav();
 window.addEventListener('resize',applyNav);
 updNavUser();
 go('home');
+
+

@@ -30,6 +30,7 @@
   --tr: all .2s cubic-bezier(.4, 0, .2, 1);
 }
 /* 
+
 [data-theme=light] {
   --bg: #f6f2ee;
   --s1: #fff;

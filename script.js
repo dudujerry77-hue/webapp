@@ -398,7 +398,6 @@ function toggleNavMode(){
     // console.log('%cSidebar mode enabled. Tip: Press "M" to toggle navigation!','color:var(--a1);font-size:14px');
     }else{
     $('threeDot').style.display='none';
-    console.log('%cTop navigation enabled.','color:var(--a1);font-size:14px');
   }
 }
 function applyNav(){

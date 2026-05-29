@@ -374,20 +374,20 @@ function renderProfile(){
   $('set-fee').value=cfg.fee;$('set-wa').value=cfg.wa;
 }
 
-// function toggleTheme(){
-//   let icon=$('theme-icon')
-//   const light=document.documentElement.dataset.theme==='light';
-//   document.documentElement.dataset.theme=light?'dark':'light';
-//   DB.saveCfg({theme:light?'dark':'light'});
-//   $('tog-dark').classList.toggle('on',!light);
-//   toast(`${light?'Dark':'Light'} mode`,'info',1500);
+function toggleTheme(){
+  let icon=$('theme-icon')
+  const light=document.documentElement.dataset.theme==='light';
+  document.documentElement.dataset.theme=light?'dark':'light';
+  DB.saveCfg({theme:light?'dark':'light'});
+  $('tog-dark').classList.toggle('on',!light);
+  toast(`${light?'Dark':'Light'} mode`,'info',1500);
 
-//   if(document.documentElement.dataset.theme==='dark'){
-//     icon.className='bi bi-moon';
-// }else{
-//   icon.className='bi bi-sun';
-// }
-// }
+  if(document.documentElement.dataset.theme==='dark'){
+    icon.className='bi bi-moon';
+}else{
+  icon.className='bi bi-sun';
+}
+}
 function toggleNavMode(){
   navMode=navMode==='top'?'sidebar':'top';
   DB.saveCfg({nav:navMode});

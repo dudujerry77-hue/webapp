@@ -194,7 +194,10 @@ function go(page){
     case'admin':renderAdmin();break;
     case'login':if(DB.isIn())go('home');break;
   }
-  if(page==='home'){document.getElementById('cart-panel').classList.add('open')}else{document.getElementById('cart-panel').classList.remove('open')};
+  if(page !== 'home'){
+  $('cart-panel').classList.remove('open');
+  $('cdov').classList.remove('open');
+}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 

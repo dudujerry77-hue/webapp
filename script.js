@@ -412,7 +412,6 @@ function checkout(){
   go('orders');
 }
 
-
 // replace orderWA with checkoutAndWhatsApp
 function checkoutAndWhatsApp(){
   if(!DB.isIn()){toast('Please log in first.','error');go('login');return}
@@ -443,25 +442,407 @@ function doLogin(){
   if(r.ok){toast(`Welcome back, ${r.u.name||r.u.email}!`,'success');updNavUser();go('home')}
   else{ferr('l-err',r.err);$('l-pw').classList.add('err','shake');setTimeout(()=>$('l-pw').classList.remove('shake'),400)}
 }
+// async function doSignup(){
+//   const n=$('s-name').value.trim(),em=$('s-email').value.trim(),pw=$('s-pw').value,pw2=$('s-pw2').value;
+//   if(!n||!em||!pw){ferr('s-err','Fill in all fields.');return}
+//   if(pw!==pw2){ferr('s-err','Passwords do not match.');return}
+//   if(pw.length<6){ferr('s-err','Password must be 6+ characters.');return}
+//   const file=$('s-avatar-file')?.files?.[0];
+//   const avatar=file?await readImageFile(file):$('s-avatar')?.value.trim()||'';
+//   if(avatar&&!isImageSrc(avatar)){ferr('s-err','Use a valid profile image URL.');return}
+//   const r=DB.signup(n,em,pw,avatar);
+//   if(r.ok){toast(`Welcome, ${n}!`,'success');updNavUser();go('home')}
+//   else ferr('s-err',r.err);
+// }
+
+// Replace the original doSignup function with the updated one
 async function doSignup(){
-  const n=$('s-name').value.trim(),em=$('s-email').value.trim(),pw=$('s-pw').value,pw2=$('s-pw2').value;
-  if(!n||!em||!pw){ferr('s-err','Fill in all fields.');return}
-  if(pw!==pw2){ferr('s-err','Passwords do not match.');return}
-  if(pw.length<6){ferr('s-err','Password must be 6+ characters.');return}
-  const file=$('s-avatar-file')?.files?.[0];
-  const avatar=file?await readImageFile(file):$('s-avatar')?.value.trim()||'';
-  if(avatar&&!isImageSrc(avatar)){ferr('s-err','Use a valid profile image URL.');return}
-  const r=DB.signup(n,em,pw,avatar);
-  if(r.ok){toast(`Welcome, ${n}!`,'success');updNavUser();go('home')}
-  else ferr('s-err',r.err);
+  const n = $('s-name').value.trim();
+  const em = $('s-email').value.trim();
+  const pw = $('s-pw').value;
+  const pw2 = $('s-pw2').value;
+
+  if(!n || !em || !pw){
+    ferr('s-err','Fill in all fields.');
+    return;
+  }
+
+  if(pw !== pw2){
+    ferr('s-err','Passwords do not match.');
+    return;
+  }
+
+  if(pw.length < 6){
+    ferr('s-err','Password must be 6+ characters.');
+    return;
+  }
+
+  const r = DB.signup(n, em, pw, '');
+
+  if(r.ok){
+    toast(`Welcome, ${n}!`, 'success');
+    updNavUser();
+    go('home');
+  } else {
+    ferr('s-err', r.err);
+  }
 }
+
 function doLogout(){DB.logout();cart=[];updBadge();updNavUser();toast('Logged out.','info');go('home')}
 function ferr(id,msg){const el=$(id);if(el){el.textContent=msg;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),4000)}}
+// function updNavUser(){
+//   const u=DB.sess();const el=$('nav-user');if(!el)return;
+//   document.querySelectorAll('.admin-only').forEach(link=>link.style.display=u?.role==='admin'?'':'none');
+//   if(u){el.innerHTML=isImageSrc(u.avatar)?avatarHTML(u,'nav-avatar'):(u.av||icon('bi-person-check-fill'));el.onclick=()=>go(u.role==='admin'?'admin':'profile')}
+//   else{el.innerHTML='<i class="bi bi-person-x"></i>';el.onclick=()=>go('login')}
+// }
+
+///Replace the original updNavUser function with the updated one
 function updNavUser(){
-  const u=DB.sess();const el=$('nav-user');if(!el)return;
-  document.querySelectorAll('.admin-only').forEach(link=>link.style.display=u?.role==='admin'?'':'none');
-  if(u){el.innerHTML=isImageSrc(u.avatar)?avatarHTML(u,'nav-avatar'):(u.av||icon('bi-person-check-fill'));el.onclick=()=>go(u.role==='admin'?'admin':'profile')}
-  else{el.innerHTML='<i class="bi bi-person-x"></i>';el.onclick=()=>go('login')}
+  const u = DB.sess();
+  const el = $('nav-user');
+  if(!el) return;
+
+  // Admin-only navigation
+  document.querySelectorAll('.admin-only').forEach(link => {
+    link.style.display = u?.role === 'admin' ? '' : 'none';
+  });
+
+  if(u){
+    // Logged in
+    el.innerHTML = isImageSrc(u.avatar)
+      ? avatarHTML(u, 'nav-avatar')
+      : (u.av || icon('bi-person-fill'));
+
+    // Clicking profile icon
+    el.onclick = () => openProfilePicturePicker();
+
+    el.title = 'Change profile picture';
+  } else {
+    // Logged out
+    el.innerHTML = '<i class="bi bi-person"></i>';
+
+    // Clicking profile icon → login
+    el.onclick = () => go('login');
+
+    el.title = 'Sign in';
+  }
+
+  updateAuthButton();
+}
+
+
+// dynamic Login/Sign Up / Sign Out button
+function updateAuthButton(){
+  const btn = $('settings-auth-btn');
+  if(!btn) return;
+
+  const u = DB.sess();
+
+  if(u){
+    btn.innerHTML = '<i class="bi bi-box-arrow-right"></i> Sign Out';
+    btn.onclick = doLogout;
+  } else {
+    btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Sign In / Sign Up';
+    btn.onclick = () => go('login');
+  }
+}
+
+
+///Make the profile icon add/change the picture
+function openProfilePicturePicker(){
+  const u = DB.sess();
+
+  if(!u){
+    go('login');
+    return;
+  }
+
+  // Remove existing picker
+  document.getElementById('profile-picture-picker')?.remove();
+
+  const picker = document.createElement('div');
+  picker.id = 'profile-picture-picker';
+
+  picker.innerHTML = `
+    <div class="profile-picker-backdrop">
+      <div class="profile-picker-box">
+
+        <h3>Profile Picture</h3>
+        <p>Choose how you want to add your picture.</p>
+
+        <div class="profile-picker-actions">
+
+          <button type="button" id="upload-profile-btn">
+            📁 Upload Picture
+          </button>
+
+          <button type="button" id="camera-profile-btn">
+            📷 Take Picture
+          </button>
+
+          <button type="button" id="cancel-profile-btn">
+            Cancel
+          </button>
+
+        </div>
+
+        <div id="profile-drop-zone" class="profile-drop-zone">
+          <span>Drop an image here</span>
+          <small>or click to choose a picture</small>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(picker);
+
+  const uploadBtn = document.getElementById('upload-profile-btn');
+  const cameraBtn = document.getElementById('camera-profile-btn');
+  const cancelBtn = document.getElementById('cancel-profile-btn');
+  const dropZone = document.getElementById('profile-drop-zone');
+
+  // -------------------------
+  // Upload from device
+  // -------------------------
+  uploadBtn.onclick = () => {
+    const input = document.createElement('input');
+
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+
+      if(file){
+        await saveProfilePicture(file);
+      }
+    };
+
+    input.click();
+  };
+
+  // -------------------------
+  // Take picture
+  // -------------------------
+  cameraBtn.onclick = () => {
+    openProfileCamera();
+  };
+
+  // -------------------------
+  // Cancel
+  // -------------------------
+  cancelBtn.onclick = () => {
+    picker.remove();
+  };
+
+  // -------------------------
+  // Drag & Drop
+  // -------------------------
+  dropZone.onclick = () => {
+    uploadBtn.click();
+  };
+
+  dropZone.ondragover = e => {
+    e.preventDefault();
+    dropZone.classList.add('dragging');
+  };
+
+  dropZone.ondragleave = () => {
+    dropZone.classList.remove('dragging');
+  };
+
+  dropZone.ondrop = async e => {
+    e.preventDefault();
+
+    dropZone.classList.remove('dragging');
+
+    const file = e.dataTransfer.files?.[0];
+
+    if(file){
+      await saveProfilePicture(file);
+    }
+  };
+}
+
+async function saveProfilePicture(file){
+
+  if(!file.type.startsWith('image/')){
+    toast('Please select an image.', 'error');
+    return;
+  }
+
+  try{
+
+    const avatar = await readImageFile(file);
+
+    const u = DB.sess();
+
+    if(!u){
+      toast('Please sign in first.', 'error');
+      return;
+    }
+
+    /*
+      IMPORTANT:
+      Replace this with your actual DB user-update method
+      if your DB already has one.
+    */
+
+    u.avatar = avatar;
+
+    // Temporary/local session update
+    localStorage.setItem(
+      'grubglass_session',
+      JSON.stringify(u)
+    );
+
+    updNavUser();
+
+    document.getElementById('profile-picture-picker')?.remove();
+
+    toast('Profile picture updated.', 'success');
+
+  }catch(err){
+
+    console.error(err);
+
+    toast('Could not save the picture.', 'error');
+  }
+}
+
+async function openProfileCamera(){
+
+  document.getElementById('profile-picture-picker')?.remove();
+
+  const modal = document.createElement('div');
+
+  modal.id = 'profile-camera-modal';
+
+  modal.innerHTML = `
+    <div class="profile-picker-backdrop">
+
+      <div class="profile-camera-box">
+
+        <h3>Take Profile Picture</h3>
+
+        <video
+          id="profile-camera-video"
+          autoplay
+          playsinline
+        ></video>
+
+        <canvas
+          id="profile-camera-canvas"
+          style="display:none"
+        ></canvas>
+
+        <div class="profile-camera-actions">
+
+          <button id="capture-profile-btn">
+            📷 Take Picture
+          </button>
+
+          <button id="close-camera-btn">
+            Cancel
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const video = document.getElementById('profile-camera-video');
+
+  let stream;
+
+  try{
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user'
+      },
+      audio: false
+    });
+
+    video.srcObject = stream;
+
+  }catch(err){
+
+    console.error(err);
+
+    modal.remove();
+
+    toast(
+      'Camera permission was denied or no camera was found.',
+      'error'
+    );
+
+    return;
+  }
+
+  document.getElementById('capture-profile-btn').onclick = async () => {
+
+    const canvas = document.getElementById('profile-camera-canvas');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    canvas.toBlob(async blob => {
+
+      if(!blob) return;
+
+      const file = new File(
+        [blob],
+        'profile-picture.jpg',
+        {
+          type: 'image/jpeg'
+        }
+      );
+
+      stream?.getTracks().forEach(track => track.stop());
+
+      modal.remove();
+
+      await saveProfilePicture(file);
+
+    }, 'image/jpeg', 0.9);
+  };
+
+  document.getElementById('close-camera-btn').onclick = () => {
+
+    stream?.getTracks().forEach(track => track.stop());
+
+    modal.remove();
+  };
+}
+
+// localStorage update for user avatar
+function updateUserAvatar(avatar){
+  const session = DB.sess();
+
+  if(!session) return;
+
+  session.avatar = avatar;
+
+  localStorage.setItem('grubglass_session', JSON.stringify(session));
+
+  // If your DB has a user update method, use that instead.
 }
 
 // ═══════════════════════════════════════════════

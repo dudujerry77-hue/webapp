@@ -252,7 +252,10 @@ function cardHTML(p,i=0){
       <div class="pc-desc">${esc(p.desc||'')}</div>
       <div class="pc-foot">
         <div><div class="pc-price">${fmt(p.price)}</div><div class="pc-stars">${icon('bi-star-fill').repeat(Math.round(p.rating||0))} <span style="color:var(--t3)">(${p.sold||0})</span></div></div>
-        <button class="add-btn" onclick="event.stopPropagation();quickAdd(${p.id})" title="Add">+</button>
+      </div>
+      <div class="pc-actions">
+        <button class="pc-btn pc-add" onclick="event.stopPropagation();quickAdd(${p.id})" title="Add to cart">${icon('bi-cart-plus')} Add to Cart</button>
+        <button class="pc-btn pc-checkout" onclick="event.stopPropagation();buyNow(${p.id})" title="Checkout">${icon('bi-bag-check')} Checkout</button>
       </div>
     </div>
   </div>`
@@ -314,6 +317,14 @@ function quickAdd(id,notify=true){
   updBadge();renderCP();
   if(notify)toast(`${p.name} added!`,'success',1800);
   if(window.innerWidth>1000)openCart();
+}
+// Checkout from a product card: make sure the dish is in the cart, then open the cart on its order summary
+function buyNow(id){
+  if(!DB.isIn()){toast('Please log in to check out.','error');go('login');return}
+  const p=DB.prod(id);if(!p)return;
+  if(!cart.some(x=>x.id===id))cart.push({...p,qty:1});
+  updBadge();renderCP();renderCD();
+  openCart();
 }
 function chQty(id,d){const x=cart.find(x=>x.id===id);if(!x)return;x.qty=Math.max(1,x.qty+d);updBadge();renderCP();renderCD()}
 function rmCart(id){cart=cart.filter(x=>x.id!==id);updBadge();renderCP();renderCD()}

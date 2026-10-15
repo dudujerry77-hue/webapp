@@ -1059,6 +1059,50 @@ ul {
   gap: 3px
 }
 
+.pc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px
+}
+
+.pc-btn {
+  flex: 1 1 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--tr)
+}
+
+.pc-add {
+  background: var(--grad);
+  border: none;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 124, 58, .35)
+}
+
+.pc-checkout {
+  background: transparent;
+  border: 1px solid var(--bdb);
+  color: var(--a1)
+}
+
+.pc-btn:hover {
+  transform: translateY(-2px)
+}
+
+.pc-checkout:hover {
+  background: var(--s2)
+}
+
 .add-btn {
   width: 30px;
   height: 30px;
@@ -2140,7 +2184,7 @@ ul {
   }
 
   .pgrid {
-    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px
   }
 
